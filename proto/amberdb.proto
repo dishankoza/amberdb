@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package amberdb;
+
+option go_package = "github.com/dishankoza/amberdb/proto;amberdb";
+
+service AmberService {
+  rpc BeginTransaction(Empty) returns (TxnID);
+  rpc Write(WriteRequest) returns (Status);
+  rpc Read(ReadRequest) returns (ReadResponse);
+  rpc Commit(TxnID) returns (Status);
+  rpc Abort(TxnID) returns (Status);
+}
+
+message Empty {}
+message TxnID {
+  string id = 1;
+}
+
+message WriteRequest {
+  string key = 1;
+  string value = 2;
+  string tx_id = 3;
+}
+
+message ReadRequest {
+  string key = 1;
+  string read_timestamp = 2;
+}
+
+message ReadResponse {
+  string value = 1;
+}
+
+message Status {
+  bool success = 1;
+  string message = 2;
+}
