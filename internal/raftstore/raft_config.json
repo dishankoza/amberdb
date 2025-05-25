@@ -1,0 +1,5 @@
+[
+  {"id": "node1", "address": "localhost:9001"},
+  {"id": "node2", "address": "localhost:9002"},
+  {"id": "node3", "address": "localhost:9003"}
+]

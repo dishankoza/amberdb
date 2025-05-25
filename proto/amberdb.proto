@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package amberdb;
 
-option go_package = "github.com/dishankoza/amberdb/proto;amberdb";
+option go_package = "./proto";
 
 service AmberService {
   rpc BeginTransaction(Empty) returns (TxnID);

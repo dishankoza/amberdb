@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.28.2
-// source: proto/amberdb.proto
+// source: amberdb.proto
 
-package amberdb
+package proto
 
 import (
 	context "context"
@@ -269,5 +269,5 @@ var AmberService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/amberdb.proto",
+	Metadata: "amberdb.proto",
 }

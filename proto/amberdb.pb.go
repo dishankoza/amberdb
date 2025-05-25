@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.28.2
-// source: proto/amberdb.proto
+// source: amberdb.proto
 
-package amberdb
+package proto
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -29,7 +29,7 @@ type Empty struct {
 
 func (x *Empty) Reset() {
 	*x = Empty{}
-	mi := &file_proto_amberdb_proto_msgTypes[0]
+	mi := &file_amberdb_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -41,7 +41,7 @@ func (x *Empty) String() string {
 func (*Empty) ProtoMessage() {}
 
 func (x *Empty) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_amberdb_proto_msgTypes[0]
+	mi := &file_amberdb_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -54,7 +54,7 @@ func (x *Empty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Empty.ProtoReflect.Descriptor instead.
 func (*Empty) Descriptor() ([]byte, []int) {
-	return file_proto_amberdb_proto_rawDescGZIP(), []int{0}
+	return file_amberdb_proto_rawDescGZIP(), []int{0}
 }
 
 type TxnID struct {
@@ -66,7 +66,7 @@ type TxnID struct {
 
 func (x *TxnID) Reset() {
 	*x = TxnID{}
-	mi := &file_proto_amberdb_proto_msgTypes[1]
+	mi := &file_amberdb_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -78,7 +78,7 @@ func (x *TxnID) String() string {
 func (*TxnID) ProtoMessage() {}
 
 func (x *TxnID) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_amberdb_proto_msgTypes[1]
+	mi := &file_amberdb_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -91,7 +91,7 @@ func (x *TxnID) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TxnID.ProtoReflect.Descriptor instead.
 func (*TxnID) Descriptor() ([]byte, []int) {
-	return file_proto_amberdb_proto_rawDescGZIP(), []int{1}
+	return file_amberdb_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *TxnID) GetId() string {
@@ -112,7 +112,7 @@ type WriteRequest struct {
 
 func (x *WriteRequest) Reset() {
 	*x = WriteRequest{}
-	mi := &file_proto_amberdb_proto_msgTypes[2]
+	mi := &file_amberdb_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -124,7 +124,7 @@ func (x *WriteRequest) String() string {
 func (*WriteRequest) ProtoMessage() {}
 
 func (x *WriteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_amberdb_proto_msgTypes[2]
+	mi := &file_amberdb_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -137,7 +137,7 @@ func (x *WriteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WriteRequest.ProtoReflect.Descriptor instead.
 func (*WriteRequest) Descriptor() ([]byte, []int) {
-	return file_proto_amberdb_proto_rawDescGZIP(), []int{2}
+	return file_amberdb_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *WriteRequest) GetKey() string {
@@ -171,7 +171,7 @@ type ReadRequest struct {
 
 func (x *ReadRequest) Reset() {
 	*x = ReadRequest{}
-	mi := &file_proto_amberdb_proto_msgTypes[3]
+	mi := &file_amberdb_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -183,7 +183,7 @@ func (x *ReadRequest) String() string {
 func (*ReadRequest) ProtoMessage() {}
 
 func (x *ReadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_amberdb_proto_msgTypes[3]
+	mi := &file_amberdb_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -196,7 +196,7 @@ func (x *ReadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadRequest.ProtoReflect.Descriptor instead.
 func (*ReadRequest) Descriptor() ([]byte, []int) {
-	return file_proto_amberdb_proto_rawDescGZIP(), []int{3}
+	return file_amberdb_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ReadRequest) GetKey() string {
@@ -222,7 +222,7 @@ type ReadResponse struct {
 
 func (x *ReadResponse) Reset() {
 	*x = ReadResponse{}
-	mi := &file_proto_amberdb_proto_msgTypes[4]
+	mi := &file_amberdb_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -234,7 +234,7 @@ func (x *ReadResponse) String() string {
 func (*ReadResponse) ProtoMessage() {}
 
 func (x *ReadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_amberdb_proto_msgTypes[4]
+	mi := &file_amberdb_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -247,7 +247,7 @@ func (x *ReadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadResponse.ProtoReflect.Descriptor instead.
 func (*ReadResponse) Descriptor() ([]byte, []int) {
-	return file_proto_amberdb_proto_rawDescGZIP(), []int{4}
+	return file_amberdb_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ReadResponse) GetValue() string {
@@ -267,7 +267,7 @@ type Status struct {
 
 func (x *Status) Reset() {
 	*x = Status{}
-	mi := &file_proto_amberdb_proto_msgTypes[5]
+	mi := &file_amberdb_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -279,7 +279,7 @@ func (x *Status) String() string {
 func (*Status) ProtoMessage() {}
 
 func (x *Status) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_amberdb_proto_msgTypes[5]
+	mi := &file_amberdb_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -292,7 +292,7 @@ func (x *Status) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Status.ProtoReflect.Descriptor instead.
 func (*Status) Descriptor() ([]byte, []int) {
-	return file_proto_amberdb_proto_rawDescGZIP(), []int{5}
+	return file_amberdb_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Status) GetSuccess() bool {
@@ -309,11 +309,11 @@ func (x *Status) GetMessage() string {
 	return ""
 }
 
-var File_proto_amberdb_proto protoreflect.FileDescriptor
+var File_amberdb_proto protoreflect.FileDescriptor
 
-const file_proto_amberdb_proto_rawDesc = "" +
+const file_amberdb_proto_rawDesc = "" +
 	"\n" +
-	"\x13proto/amberdb.proto\x12\aamberdb\"\a\n" +
+	"\ramberdb.proto\x12\aamberdb\"\a\n" +
 	"\x05Empty\"\x17\n" +
 	"\x05TxnID\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"K\n" +
@@ -334,22 +334,22 @@ const file_proto_amberdb_proto_rawDesc = "" +
 	"\x05Write\x12\x15.amberdb.WriteRequest\x1a\x0f.amberdb.Status\x123\n" +
 	"\x04Read\x12\x14.amberdb.ReadRequest\x1a\x15.amberdb.ReadResponse\x12)\n" +
 	"\x06Commit\x12\x0e.amberdb.TxnID\x1a\x0f.amberdb.Status\x12(\n" +
-	"\x05Abort\x12\x0e.amberdb.TxnID\x1a\x0f.amberdb.StatusB-Z+github.com/dishankoza/amberdb/proto;amberdbb\x06proto3"
+	"\x05Abort\x12\x0e.amberdb.TxnID\x1a\x0f.amberdb.StatusB\tZ\a./protob\x06proto3"
 
 var (
-	file_proto_amberdb_proto_rawDescOnce sync.Once
-	file_proto_amberdb_proto_rawDescData []byte
+	file_amberdb_proto_rawDescOnce sync.Once
+	file_amberdb_proto_rawDescData []byte
 )
 
-func file_proto_amberdb_proto_rawDescGZIP() []byte {
-	file_proto_amberdb_proto_rawDescOnce.Do(func() {
-		file_proto_amberdb_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_amberdb_proto_rawDesc), len(file_proto_amberdb_proto_rawDesc)))
+func file_amberdb_proto_rawDescGZIP() []byte {
+	file_amberdb_proto_rawDescOnce.Do(func() {
+		file_amberdb_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_amberdb_proto_rawDesc), len(file_amberdb_proto_rawDesc)))
 	})
-	return file_proto_amberdb_proto_rawDescData
+	return file_amberdb_proto_rawDescData
 }
 
-var file_proto_amberdb_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
-var file_proto_amberdb_proto_goTypes = []any{
+var file_amberdb_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_amberdb_proto_goTypes = []any{
 	(*Empty)(nil),        // 0: amberdb.Empty
 	(*TxnID)(nil),        // 1: amberdb.TxnID
 	(*WriteRequest)(nil), // 2: amberdb.WriteRequest
@@ -357,7 +357,7 @@ var file_proto_amberdb_proto_goTypes = []any{
 	(*ReadResponse)(nil), // 4: amberdb.ReadResponse
 	(*Status)(nil),       // 5: amberdb.Status
 }
-var file_proto_amberdb_proto_depIdxs = []int32{
+var file_amberdb_proto_depIdxs = []int32{
 	0, // 0: amberdb.AmberService.BeginTransaction:input_type -> amberdb.Empty
 	2, // 1: amberdb.AmberService.Write:input_type -> amberdb.WriteRequest
 	3, // 2: amberdb.AmberService.Read:input_type -> amberdb.ReadRequest
@@ -375,26 +375,26 @@ var file_proto_amberdb_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_proto_amberdb_proto_init() }
-func file_proto_amberdb_proto_init() {
-	if File_proto_amberdb_proto != nil {
+func init() { file_amberdb_proto_init() }
+func file_amberdb_proto_init() {
+	if File_amberdb_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_amberdb_proto_rawDesc), len(file_proto_amberdb_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_amberdb_proto_rawDesc), len(file_amberdb_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_proto_amberdb_proto_goTypes,
-		DependencyIndexes: file_proto_amberdb_proto_depIdxs,
-		MessageInfos:      file_proto_amberdb_proto_msgTypes,
+		GoTypes:           file_amberdb_proto_goTypes,
+		DependencyIndexes: file_amberdb_proto_depIdxs,
+		MessageInfos:      file_amberdb_proto_msgTypes,
 	}.Build()
-	File_proto_amberdb_proto = out.File
-	file_proto_amberdb_proto_goTypes = nil
-	file_proto_amberdb_proto_depIdxs = nil
+	File_amberdb_proto = out.File
+	file_amberdb_proto_goTypes = nil
+	file_amberdb_proto_depIdxs = nil
 }

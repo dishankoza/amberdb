@@ -1,8 +1,8 @@
-// internal/kvstore/store.go
 package kvstore
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,30 +16,47 @@ type Store struct {
 func NewStore(path string) (*Store, error) {
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open database: %w", err)
+	}
+
+	// Validate connection
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
 	s := &Store{db: db}
+
+	// Now safely initialize schema
 	if err := s.initSchema(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to init schema: %w", err)
 	}
+
 	return s, nil
 }
 
 func (s *Store) initSchema() error {
-	query := `CREATE TABLE IF NOT EXISTS kv (
+	if s.db == nil {
+		return fmt.Errorf("db connection is nil in initSchema")
+	}
+
+	query := `
+	CREATE TABLE IF NOT EXISTS kv (
 		key TEXT,
 		value TEXT,
 		timestamp TEXT,
 		tx_id TEXT,
 		is_committed BOOLEAN
-	);`
+	);
+	`
 	_, err := s.db.Exec(query)
 	return err
 }
 
 func (s *Store) Close() error {
-	return s.db.Close()
+	if s.db != nil {
+		return s.db.Close()
+	}
+	return nil
 }
 
 func (s *Store) BeginTransaction() string {
