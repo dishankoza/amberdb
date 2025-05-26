@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/dishankoza/amberdb/internal/hlc"
 	"github.com/dishankoza/amberdb/internal/kvstore"
 	"github.com/dishankoza/amberdb/internal/raftstore"
 	amberpb "github.com/dishankoza/amberdb/proto"
@@ -18,10 +19,13 @@ type server struct {
 	amberpb.UnimplementedAmberServiceServer
 	store     *kvstore.Store
 	raftStore *raftstore.Store
+	clock     *hlc.Clock
 }
 
 func RegisterAmberService(grpcServer *grpc.Server, store *kvstore.Store, raftStore *raftstore.Store) {
-	amberpb.RegisterAmberServiceServer(grpcServer, &server{store: store, raftStore: raftStore})
+	// Initialize HLC clock for reads
+	clock := hlc.NewClock()
+	amberpb.RegisterAmberServiceServer(grpcServer, &server{store: store, raftStore: raftStore, clock: clock})
 }
 
 func (s *server) BeginTransaction(ctx context.Context, _ *amberpb.Empty) (*amberpb.TxnID, error) {
@@ -35,10 +39,14 @@ func (s *server) Write(ctx context.Context, req *amberpb.WriteRequest) (*amberpb
 		return &amberpb.Status{Success: false, Message: "not the leader"}, nil
 	}
 
+	// Use HLC timestamp for ordering
+	ts := s.clock.Now()
 	cmd := raftstore.Command{
-		Key:   req.Key,
-		Value: req.Value,
-		TxID:  req.TxId,
+		Op:        "WRITE",
+		Key:       req.Key,
+		Value:     req.Value,
+		TxID:      req.TxId,
+		Timestamp: ts,
 	}
 
 	var buf bytes.Buffer
@@ -57,7 +65,13 @@ func (s *server) Write(ctx context.Context, req *amberpb.WriteRequest) (*amberpb
 }
 
 func (s *server) Read(ctx context.Context, req *amberpb.ReadRequest) (*amberpb.ReadResponse, error) {
-	val, err := s.store.Read(req.Key, req.ReadTimestamp)
+	// If client did not supply read_timestamp, use HLC.Now()
+	readTs := req.ReadTimestamp
+	if readTs == "" {
+		readTs = s.clock.Now()
+	}
+	// Follower reads allowed: we read local store directly
+	val, err := s.store.Read(req.Key, readTs)
 	if err != nil {
 		log.Printf("Read error: %v", err)
 		return nil, err
@@ -66,19 +80,41 @@ func (s *server) Read(ctx context.Context, req *amberpb.ReadRequest) (*amberpb.R
 }
 
 func (s *server) Commit(ctx context.Context, req *amberpb.TxnID) (*amberpb.Status, error) {
-	err := s.store.Commit(req.Id)
-	if err != nil {
-		log.Printf("Commit error: %v", err)
-		return &amberpb.Status{Success: false, Message: err.Error()}, nil
+	if !s.raftStore.IsLeader() {
+		log.Printf("Commit rejected: not the leader")
+		return &amberpb.Status{Success: false, Message: "not the leader"}, nil
+	}
+	// Replicate commit via Raft
+	cmd := raftstore.Command{Op: "COMMIT", TxID: req.Id}
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(cmd); err != nil {
+		log.Printf("Encode commit error: %v", err)
+		return &amberpb.Status{Success: false, Message: "encoding failed"}, nil
+	}
+	applyFuture := s.raftStore.Apply(buf.Bytes(), 5*time.Second)
+	if err := applyFuture.Error(); err != nil {
+		log.Printf("Raft commit error: %v", err)
+		return &amberpb.Status{Success: false, Message: "raft apply failed"}, nil
 	}
 	return &amberpb.Status{Success: true, Message: "Committed"}, nil
 }
 
 func (s *server) Abort(ctx context.Context, req *amberpb.TxnID) (*amberpb.Status, error) {
-	err := s.store.Abort(req.Id)
-	if err != nil {
-		log.Printf("Abort error: %v", err)
-		return &amberpb.Status{Success: false, Message: err.Error()}, nil
+	if !s.raftStore.IsLeader() {
+		log.Printf("Abort rejected: not the leader")
+		return &amberpb.Status{Success: false, Message: "not the leader"}, nil
+	}
+	// Replicate abort via Raft
+	cmd := raftstore.Command{Op: "ABORT", TxID: req.Id}
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(cmd); err != nil {
+		log.Printf("Encode abort error: %v", err)
+		return &amberpb.Status{Success: false, Message: "encoding failed"}, nil
+	}
+	applyFuture := s.raftStore.Apply(buf.Bytes(), 5*time.Second)
+	if err := applyFuture.Error(); err != nil {
+		log.Printf("Raft abort error: %v", err)
+		return &amberpb.Status{Success: false, Message: "raft apply failed"}, nil
 	}
 	return &amberpb.Status{Success: true, Message: "Aborted"}, nil
 }

@@ -63,11 +63,17 @@ func (s *Store) BeginTransaction() string {
 	return uuid.New().String()
 }
 
-func (s *Store) Write(key, value, txID string) error {
-	timestamp := time.Now().Format(time.RFC3339Nano)
+// WriteWithTimestamp writes a versioned value using the provided timestamp (for HLC ordering)
+func (s *Store) WriteWithTimestamp(key, value, txID, timestamp string) error {
 	query := `INSERT INTO kv (key, value, timestamp, tx_id, is_committed) VALUES (?, ?, ?, ?, false)`
 	_, err := s.db.Exec(query, key, value, timestamp, txID)
 	return err
+}
+
+// Write is maintained for compatibility but uses system time
+func (s *Store) Write(key, value, txID string) error {
+	now := time.Now().Format(time.RFC3339Nano)
+	return s.WriteWithTimestamp(key, value, txID, now)
 }
 
 func (s *Store) Read(key, readTimestamp string) (string, error) {

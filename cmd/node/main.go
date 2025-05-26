@@ -34,9 +34,21 @@ func main() {
 		log.Fatal("NODE_ID env variable is required")
 	}
 
-	raftAddr := os.Getenv("RAFT_ADDR")
-	if raftAddr == "" {
-		log.Fatal("RAFT_ADDR env variable is required")
+	// Raft advertise address for other nodes to connect
+	raftAdvertise := os.Getenv("RAFT_ADDR")
+	if raftAdvertise == "" {
+		log.Fatal("RAFT_ADDR env variable is required, e.g. node1:9001")
+	}
+	// Raft bind address for listening; default to 0.0.0.0:<port>
+	raftBind := os.Getenv("RAFT_BIND_ADDR")
+	log.Printf("RAFT_BIND_ADDR: %s", raftBind)
+	if raftBind == "" {
+		// extract port from advertise address
+		_, port, err := net.SplitHostPort(raftAdvertise)
+		if err != nil {
+			log.Fatalf("invalid RAFT_ADDR: %v", err)
+		}
+		raftBind = "0.0.0.0:" + port
 	}
 
 	store, err := kvstore.NewStore(dbPath)
@@ -47,17 +59,27 @@ func main() {
 
 	fsm := raftstore.NewFSM(store)
 
-	peers := loadPeers("./internal/raftstore/raft_config.json")
+	// Load Raft peers configuration
+	configPath := os.Getenv("RAFT_CONFIG_PATH")
+	if configPath == "" {
+		configPath = "./internal/raftstore/raft_config.json"
+	}
+	peers := loadPeers(configPath)
+	for _, p := range peers {
+		log.Printf("Loaded peer: %s at %s", p.ID, p.Address)
+	}
 	raftServers := make([]raft.Server, 0, len(peers))
 	for _, p := range peers {
+		log.Printf("Configuring peer %s at %s", p.ID, p.Address)
 		raftServers = append(raftServers, raft.Server{
-			ID:      raft.ServerID(p.ID),
-			Address: raft.ServerAddress(p.Address),
+			ID:       raft.ServerID(p.ID),
+			Address:  raft.ServerAddress(p.Address),
+			Suffrage: raft.Voter, // <-- ensure all peers are voters
 		})
 	}
 
 	raftDataDir := filepath.Join("./raft-data", nodeID)
-	raftNode, err := raftstore.NewRaftNode(raftDataDir, nodeID, raftAddr, raftServers, fsm)
+	raftNode, err := raftstore.NewRaftNode(raftDataDir, nodeID, raftAdvertise, raftBind, raftServers, fsm)
 	if err != nil {
 		log.Fatalf("failed to start raft node: %v", err)
 	}
@@ -67,10 +89,12 @@ func main() {
 	rpc.RegisterAmberService(grpcServer, store, raftNode)
 	reflection.Register(grpcServer)
 
+	// configure gRPC port from environment
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "50051"
 	}
+
 	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)

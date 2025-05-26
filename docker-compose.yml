@@ -1,0 +1,122 @@
+version: '3.7'
+services:
+  metaservice:
+    build:
+      context: .
+      dockerfile: cmd/metaservice/Dockerfile
+    container_name: amberdb-metaservice
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./internal/raftstore/raft_config.json:/data/raft_config.json
+      - ./internal/metastore/shard_config.json:/data/shard_config.json
+    environment:
+      - META_PORT=8080
+      - SHARD_CONFIG_PATH=/data/shard_config.json
+    networks:
+      - amberdb-net
+
+  node1:
+    build:
+      context: .
+      dockerfile: cmd/node/Dockerfile
+    container_name: amberdb-node1
+    depends_on:
+      - metaservice
+    ports:
+      - "50051:50051"
+      - "9001:9001"
+    volumes:
+      - ./node1.db:/data/data.db
+      - ./raft-data/node1:/data/raft-data/node1
+      # Make sure this config file contains node1:9001, node2:9001, node3:9001 (not localhost)
+      - ./internal/raftstore/raft_config.json:/data/raft_config.json
+      - ./internal/metastore/shard_config.json:/data/shard_config.json
+    environment:
+      - NODE_ID=node1
+      - RAFT_ADDR=node1:9001
+      - PORT=50051
+      - DB_PATH=/data/data.db
+      - RAFT_CONFIG_PATH=/data/raft_config.json
+      - SHARD_CONFIG_PATH=/data/shard_config.json
+      - RAFT_BIND_ADDR=0.0.0.0:9001
+    hostname: node1
+    networks:
+      amberdb-net:
+        aliases:
+          - node1
+
+  node2:
+    build:
+      context: .
+      dockerfile: cmd/node/Dockerfile
+    container_name: amberdb-node2
+    depends_on:
+      - metaservice
+    ports:
+      - "50052:50051"
+      - "9002:9001"
+    volumes:
+      - ./node2.db:/data/data.db
+      - ./raft-data/node2:/data/raft-data/node2
+      # Make sure this config file contains node1:9001, node2:9001, node3:9001 (not localhost)
+      - ./internal/raftstore/raft_config.json:/data/raft_config.json
+      - ./internal/metastore/shard_config.json:/data/shard_config.json
+    environment:
+      - NODE_ID=node2
+      - RAFT_ADDR=node2:9001
+      - PORT=50051
+      - DB_PATH=/data/data.db
+      - RAFT_CONFIG_PATH=/data/raft_config.json
+      - SHARD_CONFIG_PATH=/data/shard_config.json
+      - RAFT_BIND_ADDR=0.0.0.0:9001
+    hostname: node2
+    networks:
+      amberdb-net:
+        aliases:
+          - node2
+
+  node3:
+    build:
+      context: .
+      dockerfile: cmd/node/Dockerfile
+    container_name: amberdb-node3
+    depends_on:
+      - metaservice
+    ports:
+      - "50053:50051"
+      - "9003:9001"
+    volumes:
+      - ./node3.db:/data/data.db
+      - ./raft-data/node3:/data/raft-data/node3
+      # Make sure this config file contains node1:9001, node2:9001, node3:9001 (not localhost)
+      - ./internal/raftstore/raft_config.json:/data/raft_config.json
+      - ./internal/metastore/shard_config.json:/data/shard_config.json
+    environment:
+      - NODE_ID=node3
+      - RAFT_ADDR=node3:9001
+      - PORT=50051
+      - DB_PATH=/data/data.db
+      - RAFT_CONFIG_PATH=/data/raft_config.json
+      - SHARD_CONFIG_PATH=/data/shard_config.json
+      - RAFT_BIND_ADDR=0.0.0.0:9001
+    hostname: node3
+    networks:
+      amberdb-net:
+        aliases:
+          - node3
+
+  client:
+    build:
+      context: .
+      dockerfile: cmd/client/Dockerfile
+    container_name: amberdb-client
+    depends_on:
+      - node1
+      - node2
+      - node3
+    networks:
+      - amberdb-net
+networks:
+  amberdb-net:
+    driver: bridge

@@ -1,0 +1,104 @@
+2025/05/26 13:03:28 RAFT_BIND_ADDR: 0.0.0.0:9001
+2025/05/26 13:03:28 Loaded peer: node1 at localhost:9001
+2025/05/26 13:03:28 Loaded peer: node2 at localhost:9002
+2025/05/26 13:03:28 Loaded peer: node3 at localhost:9003
+2025/05/26 13:03:28 Configuring peer node1 at localhost:9001
+2025/05/26 13:03:28 Configuring peer node2 at localhost:9002
+2025/05/26 13:03:28 Configuring peer node3 at localhost:9003
+2025-05-26T13:03:28.883-0700 [INFO]  raft-transport: configuring peer: id=node1 address=localhost:9001
+2025-05-26T13:03:28.883-0700 [INFO]  raft-transport: configured peer: id=node1 address=localhost:9001
+2025-05-26T13:03:28.883-0700 [INFO]  raft-transport: configuring peer: id=node2 address=localhost:9002
+2025-05-26T13:03:28.883-0700 [INFO]  raft-transport: configured peer: id=node2 address=localhost:9002
+2025-05-26T13:03:28.883-0700 [INFO]  raft-transport: configuring peer: id=node3 address=localhost:9003
+2025-05-26T13:03:28.883-0700 [INFO]  raft-transport: configured peer: id=node3 address=localhost:9003
+2025/05/26 13:03:28 Rollback failed: tx closed
+2025/05/26 13:03:28 Rollback failed: tx closed
+2025/05/26 13:03:28 Rollback failed: tx closed
+2025-05-26T13:03:28.921-0700 [INFO]  raft: initial configuration: index=1 servers="[{Suffrage:Voter ID:node1 Address:localhost:9001} {Suffrage:Voter ID:node2 Address:localhost:9002} {Suffrage:Voter ID:node3 Address:localhost:9003}]"
+AmberDB Node node1 running on port 50051
+2025-05-26T13:03:28.924-0700 [INFO]  raft: entering follower state: follower="Node at 127.0.0.1:9001 [Follower]" leader-address= leader-id=
+2025-05-26T13:03:30.013-0700 [DEBUG] raft: received a requestPreVote with a newer term, grant the pre-vote
+2025-05-26T13:03:30.304-0700 [WARN]  raft: heartbeat timeout reached, starting election: last-leader-addr= last-leader-id=
+2025-05-26T13:03:30.304-0700 [INFO]  raft: entering candidate state: node="Node at 127.0.0.1:9001 [Candidate]" term=133
+2025-05-26T13:03:30.304-0700 [DEBUG] raft: pre-voting for self: term=133 id=node1
+2025-05-26T13:03:30.304-0700 [DEBUG] raft: asking for pre-vote: term=133 from=node2 address=localhost:9002
+2025-05-26T13:03:30.304-0700 [DEBUG] raft: asking for pre-vote: term=133 from=node3 address=localhost:9003
+2025-05-26T13:03:30.304-0700 [DEBUG] raft: calculated votes needed: needed=2 term=133
+2025-05-26T13:03:30.305-0700 [DEBUG] raft: pre-vote received: from=node1 term=133 tally=0
+2025-05-26T13:03:30.305-0700 [DEBUG] raft: pre-vote granted: from=node1 term=133 tally=1
+2025-05-26T13:03:30.307-0700 [DEBUG] raft: pre-vote received: from=node3 term=4134 tally=1
+2025-05-26T13:03:30.307-0700 [DEBUG] raft: pre-vote denied: found newer term, falling back to follower: term=4134
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025-05-26T13:03:30.314-0700 [INFO]  raft: entering follower state: follower="Node at 127.0.0.1:9001 [Follower]" leader-address= leader-id=
+2025-05-26T13:03:30.500-0700 [DEBUG] raft: received a requestPreVote with a newer term, grant the pre-vote
+2025-05-26T13:03:30.507-0700 [DEBUG] raft: lost leadership because received a requestVote with a newer term
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025-05-26T13:03:30.544-0700 [WARN]  raft: failed to get previous log: previous-index=4135 last-index=134 error="log not found"
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:03:30 Rollback failed: tx closed
+2025/05/26 13:07:29 Write rejected: not the leader
+2025/05/26 13:07:36 Rollback failed: tx closed

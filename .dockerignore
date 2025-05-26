@@ -1,0 +1,5 @@
+.git
+**/node*.db
+**/raft-data
+data.db
+raft-data
