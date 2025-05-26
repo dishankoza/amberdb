@@ -4035,3 +4035,4 @@ AmberDB Node node2 running on port 50052
 2025-05-26T13:03:31.710-0700 [WARN]  raft: appendEntries rejected, sending older logs: peer="{Voter node3 localhost:9003}" next=134
 2025-05-26T13:03:32.118-0700 [INFO]  raft: pipelining replication: peer="{Voter node3 localhost:9003}"
 2025/05/26 13:07:36 Rollback failed: tx closed
+2025-05-26T13:18:00.122-0700 [WARN]  raft: failed to contact: server-id=node1 time=508.762333ms
