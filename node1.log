@@ -102,3 +102,30 @@ AmberDB Node node1 running on port 50051
 2025/05/26 13:03:30 Rollback failed: tx closed
 2025/05/26 13:07:29 Write rejected: not the leader
 2025/05/26 13:07:36 Rollback failed: tx closed
+2025-05-28T22:07:15.622-0700 [WARN]  raft: rejecting pre-vote request since we have a leader: from=127.0.0.1:9003 leader=127.0.0.1:9002 leader-id=node2
+2025-05-28T22:07:16.482-0700 [WARN]  raft: heartbeat timeout reached, starting election: last-leader-addr=127.0.0.1:9002 last-leader-id=node2
+2025-05-28T22:07:16.483-0700 [INFO]  raft: entering candidate state: node="Node at 127.0.0.1:9001 [Candidate]" term=4136
+2025-05-28T22:07:16.483-0700 [DEBUG] raft: pre-voting for self: term=4136 id=node1
+2025-05-28T22:07:16.483-0700 [DEBUG] raft: asking for pre-vote: term=4136 from=node2 address=localhost:9002
+2025-05-28T22:07:16.483-0700 [DEBUG] raft: asking for pre-vote: term=4136 from=node3 address=localhost:9003
+2025-05-28T22:07:16.483-0700 [DEBUG] raft: calculated votes needed: needed=2 term=4136
+2025-05-28T22:07:16.483-0700 [DEBUG] raft: pre-vote received: from=node1 term=4136 tally=0
+2025-05-28T22:07:16.483-0700 [DEBUG] raft: pre-vote granted: from=node1 term=4136 tally=1
+2025-05-28T22:07:16.483-0700 [DEBUG] raft: pre-vote received: from=node2 term=4136 tally=1
+2025-05-28T22:07:16.483-0700 [DEBUG] raft: pre-vote granted: from=node2 term=4136 tally=2
+2025-05-28T22:07:16.483-0700 [INFO]  raft: pre-vote successful, starting election: term=4136 tally=2 refused=0 votesNeeded=2
+2025/05/28 22:07:16 Rollback failed: tx closed
+2025-05-28T22:07:16.492-0700 [DEBUG] raft: voting for self: term=4136 id=node1
+2025/05/28 22:07:16 Rollback failed: tx closed
+2025/05/28 22:07:16 Rollback failed: tx closed
+2025-05-28T22:07:16.501-0700 [DEBUG] raft: asking for vote: term=4136 from=node2 address=localhost:9002
+2025-05-28T22:07:16.501-0700 [DEBUG] raft: asking for vote: term=4136 from=node3 address=localhost:9003
+2025-05-28T22:07:16.502-0700 [DEBUG] raft: vote granted: from=node1 term=4136 tally=1
+2025-05-28T22:07:16.519-0700 [DEBUG] raft: vote granted: from=node2 term=4136 tally=2
+2025-05-28T22:07:16.520-0700 [INFO]  raft: election won: term=4136 tally=2
+2025-05-28T22:07:16.520-0700 [INFO]  raft: entering leader state: leader="Node at 127.0.0.1:9001 [Leader]"
+2025-05-28T22:07:16.520-0700 [INFO]  raft: added peer, starting replication: peer=node2
+2025-05-28T22:07:16.520-0700 [INFO]  raft: added peer, starting replication: peer=node3
+2025-05-28T22:07:16.521-0700 [INFO]  raft: pipelining replication: peer="{Voter node2 localhost:9002}"
+2025/05/28 22:07:16 Rollback failed: tx closed
+2025-05-28T22:07:16.533-0700 [INFO]  raft: pipelining replication: peer="{Voter node3 localhost:9003}"

@@ -4036,3 +4036,24 @@ AmberDB Node node2 running on port 50052
 2025-05-26T13:03:32.118-0700 [INFO]  raft: pipelining replication: peer="{Voter node3 localhost:9003}"
 2025/05/26 13:07:36 Rollback failed: tx closed
 2025-05-26T13:18:00.122-0700 [WARN]  raft: failed to contact: server-id=node1 time=508.762333ms
+2025-05-26T14:15:13.305-0700 [WARN]  raft: failed to contact: server-id=node1 time=815.101334ms
+2025-05-26T17:16:13.371-0700 [WARN]  raft: failed to contact: server-id=node1 time=933.544ms
+2025-05-27T02:51:47.389-0700 [WARN]  raft: failed to contact: server-id=node1 time=922.2235ms
+2025-05-27T04:05:06.867-0700 [WARN]  raft: failed to contact: server-id=node3 time=720.524209ms
+2025-05-27T10:47:13.225-0700 [WARN]  raft: failed to contact: server-id=node1 time=638.010334ms
+2025-05-27T11:15:04.994-0700 [WARN]  raft: failed to contact: server-id=node1 time=503.353208ms
+2025-05-27T15:41:30.653-0700 [WARN]  raft: failed to contact: server-id=node1 time=934.952334ms
+2025-05-27T18:56:52.838-0700 [WARN]  raft: failed to contact: server-id=node1 time=608.027875ms
+2025-05-28T22:07:15.604-0700 [WARN]  raft: failed to contact: server-id=node1 time=1.260832s
+2025-05-28T22:07:15.606-0700 [WARN]  raft: failed to contact: server-id=node3 time=1.029742833s
+2025-05-28T22:07:15.606-0700 [WARN]  raft: failed to contact quorum of nodes, stepping down
+2025-05-28T22:07:15.606-0700 [INFO]  raft: entering follower state: follower="Node at 127.0.0.1:9002 [Follower]" leader-address= leader-id=
+2025-05-28T22:07:15.606-0700 [INFO]  raft: aborting pipeline replication: peer="{Voter node3 localhost:9003}"
+2025-05-28T22:07:15.606-0700 [INFO]  raft: aborting pipeline replication: peer="{Voter node1 localhost:9001}"
+2025-05-28T22:07:15.622-0700 [DEBUG] raft: received a requestPreVote with a newer term, grant the pre-vote
+2025-05-28T22:07:16.483-0700 [DEBUG] raft: received a requestPreVote with a newer term, grant the pre-vote
+2025-05-28T22:07:16.502-0700 [DEBUG] raft: lost leadership because received a requestVote with a newer term
+2025/05/28 22:07:16 Rollback failed: tx closed
+2025/05/28 22:07:16 Rollback failed: tx closed
+2025/05/28 22:07:16 Rollback failed: tx closed
+2025/05/28 22:07:16 Rollback failed: tx closed

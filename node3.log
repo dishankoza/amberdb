@@ -4091,3 +4091,17 @@ AmberDB Node node3 running on port 50053
 2025/05/26 13:03:32 Rollback failed: tx closed
 2025/05/26 13:03:32 Rollback failed: tx closed
 2025/05/26 13:07:36 Rollback failed: tx closed
+2025-05-28T22:07:15.620-0700 [WARN]  raft: heartbeat timeout reached, starting election: last-leader-addr=127.0.0.1:9002 last-leader-id=node2
+2025-05-28T22:07:15.621-0700 [INFO]  raft: entering candidate state: node="Node at 127.0.0.1:9003 [Candidate]" term=4136
+2025-05-28T22:07:15.621-0700 [DEBUG] raft: asking for pre-vote: term=4136 from=node1 address=localhost:9001
+2025-05-28T22:07:15.622-0700 [DEBUG] raft: asking for pre-vote: term=4136 from=node2 address=localhost:9002
+2025-05-28T22:07:15.622-0700 [DEBUG] raft: pre-voting for self: term=4136 id=node3
+2025-05-28T22:07:15.622-0700 [DEBUG] raft: calculated votes needed: needed=2 term=4136
+2025-05-28T22:07:15.622-0700 [DEBUG] raft: pre-vote received: from=node3 term=4136 tally=0
+2025-05-28T22:07:15.622-0700 [DEBUG] raft: pre-vote granted: from=node3 term=4136 tally=1
+2025/05/28 22:07:15 Rollback failed: tx closed
+2025-05-28T22:07:15.638-0700 [INFO]  raft: entering follower state: follower="Node at 127.0.0.1:9003 [Follower]" leader-address=127.0.0.1:9002 leader-id=node2
+2025-05-28T22:07:16.483-0700 [WARN]  raft: rejecting pre-vote request since we have a leader: from=127.0.0.1:9001 leader=127.0.0.1:9002 leader-id=node2
+2025-05-28T22:07:16.502-0700 [WARN]  raft: rejecting vote request since we have a leader: from=127.0.0.1:9001 leader=127.0.0.1:9002 leader-id=node2
+2025/05/28 22:07:16 Rollback failed: tx closed
+2025/05/28 22:07:16 Rollback failed: tx closed

@@ -76,3 +76,10 @@ AmberDB uses a replicated state machine architecture based on the Raft consensus
 
 ## License
 MIT License (or specify your license here)
+
+
+## Instructions to run
+
+NODE_ID=node1 RAFT_ADDR=localhost:9001 PORT=50051 DB_PATH=node1.db go run cmd/node/main.go
+NODE_ID=node2 RAFT_ADDR=localhost:9002 PORT=50052 DB_PATH=node2.db go run cmd/node/main.go
+NODE_ID=node3 RAFT_ADDR=localhost:9003 PORT=50053 DB_PATH=node3.db go run cmd/node/main.go
