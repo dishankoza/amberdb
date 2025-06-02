@@ -65,18 +65,20 @@ func (s *server) Write(ctx context.Context, req *amberpb.WriteRequest) (*amberpb
 }
 
 func (s *server) Read(ctx context.Context, req *amberpb.ReadRequest) (*amberpb.ReadResponse, error) {
-	// If client did not supply read_timestamp, use HLC.Now()
-	readTs := req.ReadTimestamp
-	if readTs == "" {
-		readTs = s.clock.Now()
+	// Get current HLC timestamp if none provided
+	readTS := req.ReadTimestamp
+	if readTS == "" {
+		readTS = s.clock.Now()
 	}
-	// Follower reads allowed: we read local store directly
-	val, err := s.store.Read(req.Key, readTs)
+
+	// Read from store with timestamp
+	value, err := s.store.ReadWithTimestamp(req.Key, readTS)
 	if err != nil {
 		log.Printf("Read error: %v", err)
 		return nil, err
 	}
-	return &amberpb.ReadResponse{Value: val}, nil
+
+	return &amberpb.ReadResponse{Value: value}, nil
 }
 
 func (s *server) Commit(ctx context.Context, req *amberpb.TxnID) (*amberpb.Status, error) {
@@ -84,18 +86,25 @@ func (s *server) Commit(ctx context.Context, req *amberpb.TxnID) (*amberpb.Statu
 		log.Printf("Commit rejected: not the leader")
 		return &amberpb.Status{Success: false, Message: "not the leader"}, nil
 	}
+
 	// Replicate commit via Raft
-	cmd := raftstore.Command{Op: "COMMIT", TxID: req.Id}
+	cmd := raftstore.Command{
+		Op:   "COMMIT",
+		TxID: req.Id,
+	}
+
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(cmd); err != nil {
 		log.Printf("Encode commit error: %v", err)
 		return &amberpb.Status{Success: false, Message: "encoding failed"}, nil
 	}
+
 	applyFuture := s.raftStore.Apply(buf.Bytes(), 5*time.Second)
 	if err := applyFuture.Error(); err != nil {
 		log.Printf("Raft commit error: %v", err)
 		return &amberpb.Status{Success: false, Message: "raft apply failed"}, nil
 	}
+
 	return &amberpb.Status{Success: true, Message: "Committed"}, nil
 }
 

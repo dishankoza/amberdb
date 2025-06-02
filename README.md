@@ -2,80 +2,205 @@
 
 AmberDB is a distributed key-value database designed for high availability and fault tolerance using the Raft consensus algorithm. It is implemented in Go and provides a simple interface for storing and retrieving data across multiple nodes.
 
+## Features
+
+- Distributed key-value storage with ACID transactions
+- Raft consensus for high availability and fault tolerance
+- Two-Phase Commit (2PC) for cross-shard transactions
+- Dynamic sharding for horizontal scalability
+- Hybrid Logical Clock (HLC) for consistent reads
+- gRPC-based communication
+- Docker support for easy deployment
+
 ## Project Structure
 
 - **cmd/**: Contains entry points for different components:
   - `node/`: Main binary for running a database node.
-  - `metaservice/`: Optional metadata service for managing sharding and cluster metadata.
-  - `client/`: (If present) Client for interacting with the cluster.
+  - `metaservice/`: Metadata service for managing sharding and distributed transactions.
+  - `client/`: Client for interacting with the cluster.
 - **internal/**: Core logic and internal modules:
   - `raftstore/`: Raft consensus implementation and configuration.
   - `kvstore/`: Key-value storage engine.
   - `metastore/`: Sharding and metadata management.
+  - `coordinator/`: Two-Phase Commit coordination.
   - `rpc/`: gRPC server implementation.
   - `hlc/`: Hybrid logical clock utilities.
 - **proto/**: Protocol buffer definitions and generated gRPC code.
 - **raft-data/**: Data directories for each node's Raft state and logs.
-- **run-local-nodes.sh**: Script to build and launch a 3-node local cluster and optional metaservice.
-- **webServer/**: (Optional) Web server component for UI or API access.
 
-## Architecture Overview
+## Prerequisites
 
-AmberDB uses a replicated state machine architecture based on the Raft consensus protocol. Each node maintains its own copy of the data and participates in leader election and log replication. The cluster can tolerate node failures as long as a majority of nodes are available.
+1. Go 1.18 or later
+2. Docker and Docker Compose (optional)
+3. Protobuf compiler (optional, for development)
 
-- **Nodes**: Each node runs the AmberDB binary and participates in the Raft cluster.
-- **Raft Consensus**: Ensures consistency and fault tolerance across nodes.
-- **Metaservice**: (Optional) Handles sharding and metadata for scaling out to multiple clusters or partitions.
-- **Client**: Connects to any node to perform read/write operations.
+## Running Locally
 
-## Data Flow
+### Option 1: Using Docker Compose
 
-1. **Client Request**: A client sends a request (read/write) to any node.
-2. **Leader Forwarding**: If the node is not the leader, it forwards the request to the current leader.
-3. **Replication**: The leader appends the request to its log and replicates it to follower nodes using Raft.
-4. **Commit**: Once a majority of nodes acknowledge, the leader commits the entry and applies it to the state machine.
-5. **Response**: The leader responds to the client with the result.
+1. Start the cluster:
+   ```bash
+   docker-compose up -d
+   ```
 
-## How to Run Locally
+2. Check logs:
+   ```bash
+   docker-compose logs -f
+   ```
 
-1. **Prerequisites**:
-   - Go installed (version 1.18+ recommended)
-   - (Optional) Protobuf compiler for regenerating gRPC code
+3. Stop the cluster:
+   ```bash
+   docker-compose down
+   ```
 
-2. **Build and Start Nodes**:
-   - Run the provided script:
-     ```sh
-     ./run-local-nodes.sh
-     ```
-   - This will:
-     - Build the AmberDB node binary
-     - Prepare Raft configuration and data directories
-     - Start 3 nodes (node1, node2, node3) on localhost
-     - Optionally start the metaservice (uncomment in script if needed)
+### Option 2: Running Directly
 
-3. **Logs**:
-   - Node logs: `node1.log`, `node2.log`, `node3.log`
-   - Metaservice log: `metaservice.log`
+1. Build the binaries:
+   ```bash
+   make build
+   ```
 
-4. **Stopping the Cluster**:
-   - To stop all nodes:
-     ```sh
-     pkill amberdb-node
-     pkill amberdb-metaservice
-     ```
+2. Start the metaservice:
+   ```bash
+   META_PORT=8080 ./amberdb-metaservice
+   ```
 
-5. **Client Usage**:
-   - (If client binary is present) You can run the client to interact with the cluster:
-     ```sh
-     ./amberdb-client --server=localhost:50051
-     ```
+3. Start the nodes:
+   ```bash
+   # Node 1
+   NODE_ID=node1 RAFT_ADDR=localhost:9001 PORT=50051 DB_PATH=node1.db ./amberdb-node
 
-## Customization
-- Edit `internal/raftstore/raft_config.json` to change node addresses or cluster size.
-- Edit `internal/metastore/shard_config.json` for sharding configuration (if using metaservice).
+   # Node 2
+   NODE_ID=node2 RAFT_ADDR=localhost:9002 PORT=50052 DB_PATH=node2.db ./amberdb-node
+
+   # Node 3
+   NODE_ID=node3 RAFT_ADDR=localhost:9003 PORT=50053 DB_PATH=node3.db ./amberdb-node
+   ```
+
+4. Or use the provided script:
+   ```bash
+   ./run-local-nodes.sh
+   ```
+
+## Using the Database
+
+### Basic Operations
+
+1. Start a transaction:
+   ```bash
+   curl -X POST http://localhost:8080/transaction/begin
+   # Response: {"transaction_id": "<txid>"}
+   ```
+
+2. Write data:
+   ```bash
+   curl -X POST http://localhost:8080/transaction/prepare \
+     -H "Content-Type: application/json" \
+     -d '{
+       "transaction_id": "<txid>",
+       "writes": {
+         "key1": {"key": "key1", "value": "value1"},
+         "key2": {"key": "key2", "value": "value2"}
+       }
+     }'
+   ```
+
+3. Commit transaction:
+   ```bash
+   curl -X POST http://localhost:8080/transaction/commit \
+     -H "Content-Type: application/json" \
+     -d '{"transaction_id": "<txid>"}'
+   ```
+
+4. Read data:
+   ```bash
+   curl -X GET "http://localhost:50051/read?key=key1"
+   ```
+
+### Sharding Operations
+
+1. Add a new shard:
+   ```bash
+   curl -X POST http://localhost:8080/shards \
+     -H "Content-Type: application/json" \
+     -d '{
+       "id": "shard1",
+       "min_key": "a",
+       "max_key": "m",
+       "nodes": ["localhost:50051", "localhost:50052"],
+       "primary": "localhost:50051"
+     }'
+   ```
+
+2. List shards:
+   ```bash
+   curl http://localhost:8080/shards
+   ```
+
+3. Update shard:
+   ```bash
+   curl -X PUT http://localhost:8080/shards/shard1 \
+     -H "Content-Type: application/json" \
+     -d '{
+       "nodes": ["localhost:50051", "localhost:50052", "localhost:50053"]
+     }'
+   ```
+
+## Monitoring
+
+- Node logs: `node1.log`, `node2.log`, `node3.log`
+- Metaservice log: `metaservice.log`
+- Transaction status:
+  ```bash
+  curl "http://localhost:8080/transaction/status?transaction_id=<txid>"
+  ```
+
+## Configuration
+
+1. Raft Configuration (`internal/raftstore/raft_config.json`):
+   ```json
+   [
+     {"id": "node1", "address": "localhost:9001"},
+     {"id": "node2", "address": "localhost:9002"},
+     {"id": "node3", "address": "localhost:9003"}
+   ]
+   ```
+
+2. Shard Configuration (`internal/metastore/shard_config.json`):
+   ```json
+   {
+     "shards": [
+       {
+         "id": "shard1",
+         "min_key": "a",
+         "max_key": "m",
+         "nodes": ["localhost:50051", "localhost:50052"],
+         "primary": "localhost:50051"
+       }
+     ]
+   }
+   ```
+
+## Development
+
+1. Generate Protocol Buffers:
+   ```bash
+   protoc --go_out=. --go-grpc_out=. proto/amberdb.proto
+   ```
+
+2. Run tests:
+   ```bash
+   go test ./...
+   ```
+
+3. Build binaries:
+   ```bash
+   make build
+   ```
 
 ## License
-MIT License (or specify your license here)
+
+MIT License
 
 
 ## Instructions to run

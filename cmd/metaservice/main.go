@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,9 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dishankoza/amberdb/internal/coordinator"
 	"github.com/dishankoza/amberdb/internal/metastore"
 	amberpb "github.com/dishankoza/amberdb/proto"
-	"google.golang.org/grpc"
 )
 
 type PeerConfig struct {
@@ -83,7 +82,115 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
+
+	// Initialize coordinator with 5 second timeout
+	coordinator := coordinator.NewCoordinator(5 * time.Second)
+
 	mux := http.NewServeMux()
+
+	// Add coordinator endpoints
+	mux.HandleFunc("/transaction/begin", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		txID := coordinator.BeginTransaction()
+		json.NewEncoder(w).Encode(map[string]string{"transaction_id": txID})
+	})
+
+	mux.HandleFunc("/transaction/prepare", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req struct {
+			TransactionID string                           `json:"transaction_id"`
+			Writes        map[string]*amberpb.WriteRequest `json:"writes"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			return
+		}
+
+		if err := coordinator.PrepareTransaction(r.Context(), req.TransactionID, req.Writes); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	})
+
+	mux.HandleFunc("/transaction/commit", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req struct {
+			TransactionID string `json:"transaction_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			return
+		}
+
+		if err := coordinator.CommitTransaction(r.Context(), req.TransactionID); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		defer coordinator.CleanupTransaction(req.TransactionID)
+	})
+
+	mux.HandleFunc("/transaction/abort", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req struct {
+			TransactionID string `json:"transaction_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			return
+		}
+
+		if err := coordinator.AbortTransaction(r.Context(), req.TransactionID); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		defer coordinator.CleanupTransaction(req.TransactionID)
+	})
+
+	mux.HandleFunc("/transaction/status", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		txID := r.URL.Query().Get("transaction_id")
+		if txID == "" {
+			http.Error(w, "transaction_id required", http.StatusBadRequest)
+			return
+		}
+
+		state, err := coordinator.GetTransactionState(txID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"transaction_id": txID,
+			"state":          state,
+		})
+	})
 
 	// Existing peers handler
 	mux.HandleFunc("/peers", func(w http.ResponseWriter, r *http.Request) {
@@ -182,79 +289,6 @@ func main() {
 		resp := RouteResponse{ShardID: found.ID, Nodes: found.Nodes}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
-	})
-
-	// 2PC: cross-shard atomic writes
-	mux.HandleFunc("/2pc", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		var req struct{ Writes []struct{ Key, Value string } }
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "invalid payload", http.StatusBadRequest)
-			return
-		}
-		// Map writes per node
-		shards, _ := metastore.LoadShards()
-		writesByNode := make(map[string][]struct{ Key, Value string })
-		for _, wreq := range req.Writes {
-			for _, s := range shards {
-				if s.MinKey <= wreq.Key && (s.MaxKey == "" || wreq.Key < s.MaxKey) {
-					writesByNode[s.Nodes[0]] = append(writesByNode[s.Nodes[0]], struct{ Key, Value string }{wreq.Key, wreq.Value})
-					break
-				}
-			}
-		}
-		// Dial and begin tx per node
-		txnIDs := make(map[string]string)
-		dialConns := make(map[string]*grpc.ClientConn)
-		for addr := range writesByNode {
-			conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(3*time.Second))
-			if err != nil {
-				http.Error(w, fmt.Sprintf("dial error %s: %v", addr, err), http.StatusInternalServerError)
-				return
-			}
-			dialConns[addr] = conn
-			client := amberpb.NewAmberServiceClient(conn)
-			// Prepare phase: begin tx and writes
-			resp, err := client.BeginTransaction(context.Background(), &amberpb.Empty{})
-			if err != nil {
-				http.Error(w, fmt.Sprintf("begin tx failed %s: %v", addr, err), http.StatusInternalServerError)
-				return
-			}
-			txnIDs[addr] = resp.Id
-		}
-		// Fan-out prepare (writes)
-		for addr, writes := range writesByNode {
-			client := amberpb.NewAmberServiceClient(dialConns[addr])
-			for _, wr := range writes {
-				st, err := client.Write(context.Background(), &amberpb.WriteRequest{Key: wr.Key, Value: wr.Value, TxId: txnIDs[addr]})
-				if err != nil || !st.Success {
-					// Abort on all nodes
-					for a, tx := range txnIDs {
-						rpcClient := amberpb.NewAmberServiceClient(dialConns[a])
-						rpcClient.Abort(context.Background(), &amberpb.TxnID{Id: tx})
-					}
-					http.Error(w, fmt.Sprintf("prepare failed on %s: %v %v", addr, err, st), http.StatusInternalServerError)
-					return
-				}
-			}
-		}
-		// Commit phase
-		for addr, tx := range txnIDs {
-			client := amberpb.NewAmberServiceClient(dialConns[addr])
-			st, err := client.Commit(context.Background(), &amberpb.TxnID{Id: tx})
-			if err != nil || !st.Success {
-				http.Error(w, fmt.Sprintf("commit failed on %s: %v %v", addr, err, st), http.StatusInternalServerError)
-				return
-			}
-		}
-		// Cleanup
-		for _, conn := range dialConns {
-			conn.Close()
-		}
-		json.NewEncoder(w).Encode(map[string]bool{"success": true})
 	})
 
 	log.Printf("MetaService running on port %s", port)
