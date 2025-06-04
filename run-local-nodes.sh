@@ -13,7 +13,7 @@ go build -o build/amberdb-node ./cmd/node
 
 # Build AmberDB metaservice binary (optional, uncomment if needed)
 # echo "Building AmberDB metaservice binary..."
-# go build -o build/amberdb-metaservice ./cmd/metaservice
+go build -o build/amberdb-metaservice ./cmd/metaservice
 
 # Prepare raft_config.json for localhost
 cat > ./internal/raftstore/raft_config.json <<EOF

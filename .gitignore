@@ -10,3 +10,8 @@ data/
 
 # Existing entries
 raft-data/
+
+
+terraform/
+
+k8s/

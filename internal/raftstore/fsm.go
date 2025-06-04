@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/dishankoza/amberdb/internal/kvstore"
 	"github.com/hashicorp/raft"
@@ -28,20 +29,28 @@ type Command struct {
 	Timestamp string // HLC or system timestamp for versioning
 }
 
-func (f *FSM) Apply(log *raft.Log) interface{} {
+func (f *FSM) Apply(logEntry *raft.Log) interface{} {
 	var cmd Command
-	decoder := gob.NewDecoder(bytes.NewReader(log.Data))
+	decoder := gob.NewDecoder(bytes.NewReader(logEntry.Data))
 	if err := decoder.Decode(&cmd); err != nil {
 		return fmt.Errorf("failed to decode command: %w", err)
 	}
 	// Dispatch based on operation
 	switch cmd.Op {
 	case "WRITE":
-		// Use timestamp-aware write
-		return f.store.WriteWithTimestamp(cmd.Key, cmd.Value, cmd.TxID, cmd.Timestamp)
+		log.Printf("[FSM-WRITE] Applying write - Key: %s, Value: %s, TxID: %s, Timestamp: %s", cmd.Key, cmd.Value, cmd.TxID, cmd.Timestamp)
+		err := f.store.WriteWithTimestamp(cmd.Key, cmd.Value, cmd.TxID, cmd.Timestamp)
+		if err != nil {
+			log.Printf("[FSM-WRITE-ERROR] Failed to apply write - Key: %s, Error: %v", cmd.Key, err)
+			return err
+		}
+		log.Printf("[FSM-WRITE-SUCCESS] Write applied - Key: %s", cmd.Key)
+		return nil
 	case "COMMIT":
+		log.Printf("[FSM-COMMIT] Applying commit - TxID: %s", cmd.TxID)
 		return f.store.Commit(cmd.TxID)
 	case "ABORT":
+		log.Printf("[FSM-ABORT] Applying abort - TxID: %s", cmd.TxID)
 		return f.store.Abort(cmd.TxID)
 	default:
 		return fmt.Errorf("unknown command operation: %s", cmd.Op)

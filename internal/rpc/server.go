@@ -35,12 +35,14 @@ func (s *server) BeginTransaction(ctx context.Context, _ *amberpb.Empty) (*amber
 
 func (s *server) Write(ctx context.Context, req *amberpb.WriteRequest) (*amberpb.Status, error) {
 	if !s.raftStore.IsLeader() {
-		log.Printf("Write rejected: not the leader")
+		log.Printf("[WRITE-REJECTED] Not the leader - Key: %s, Value: %s, TxID: %s", req.Key, req.Value, req.TxId)
 		return &amberpb.Status{Success: false, Message: "not the leader"}, nil
 	}
 
 	// Use HLC timestamp for ordering
 	ts := s.clock.Now()
+	log.Printf("[WRITE-REQUEST] Key: %s, Value: %s, TxID: %s, Timestamp: %s", req.Key, req.Value, req.TxId, ts)
+
 	cmd := raftstore.Command{
 		Op:        "WRITE",
 		Key:       req.Key,
@@ -51,16 +53,17 @@ func (s *server) Write(ctx context.Context, req *amberpb.WriteRequest) (*amberpb
 
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(cmd); err != nil {
-		log.Printf("Encode error: %v", err)
+		log.Printf("[WRITE-ERROR] Failed to encode command - Key: %s, Error: %v", req.Key, err)
 		return &amberpb.Status{Success: false, Message: "encoding failed"}, nil
 	}
 
 	applyFuture := s.raftStore.Apply(buf.Bytes(), 5*time.Second)
 	if err := applyFuture.Error(); err != nil {
-		log.Printf("Raft apply error: %v", err)
+		log.Printf("[WRITE-ERROR] Raft apply failed - Key: %s, Error: %v", req.Key, err)
 		return &amberpb.Status{Success: false, Message: "raft apply failed"}, nil
 	}
 
+	log.Printf("[WRITE-SUCCESS] Key: %s, Value: %s, TxID: %s", req.Key, req.Value, req.TxId)
 	return &amberpb.Status{Success: true, Message: "OK"}, nil
 }
 

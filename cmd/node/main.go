@@ -29,6 +29,15 @@ func main() {
 		dbPath = "data.db"
 	}
 
+	// Create a data directory for database files
+	dataDir := "./data"
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		log.Fatalf("failed to create data directory: %v", err)
+	}
+
+	// Ensure database is stored in the data directory
+	dbPath = filepath.Join(dataDir, dbPath)
+
 	nodeID := os.Getenv("NODE_ID")
 	if nodeID == "" {
 		log.Fatal("NODE_ID env variable is required")

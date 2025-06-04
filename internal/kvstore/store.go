@@ -3,6 +3,8 @@ package kvstore
 import (
 	"database/sql"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -16,7 +18,19 @@ type Store struct {
 }
 
 func NewStore(path string) (*Store, error) {
-	db, err := sql.Open("sqlite3", path)
+	// Convert to absolute path if it's not already
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve absolute path: %w", err)
+	}
+
+	// Ensure the directory exists
+	dir := filepath.Dir(absPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create database directory: %w", err)
+	}
+
+	db, err := sql.Open("sqlite3", absPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
