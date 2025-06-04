@@ -96,6 +96,7 @@ func main() {
 		}
 
 		txID := coordinator.BeginTransaction()
+		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"transaction_id": txID})
 	})
 
@@ -110,11 +111,25 @@ func main() {
 			Writes        map[string]*amberpb.WriteRequest `json:"writes"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "invalid request", http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("invalid request: %v", err), http.StatusBadRequest)
+			return
+		}
+
+		if req.TransactionID == "" {
+			http.Error(w, "transaction_id is required", http.StatusBadRequest)
+			return
+		}
+
+		if len(req.Writes) == 0 {
+			http.Error(w, "writes are required", http.StatusBadRequest)
 			return
 		}
 
 		if err := coordinator.PrepareTransaction(r.Context(), req.TransactionID, req.Writes); err != nil {
+			if err.Error() == "transaction not found" {
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -208,26 +223,41 @@ func main() {
 	mux.HandleFunc("/shards", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			// List shards
 			shards, err := metastore.LoadShards()
 			if err != nil {
 				http.Error(w, fmt.Sprintf("failed to load shards: %v", err), http.StatusInternalServerError)
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(shards)
+			if err := json.NewEncoder(w).Encode(shards); err != nil {
+				log.Printf("Error encoding shards response: %v", err)
+			}
+
 		case http.MethodPost:
-			// Update entire shard list
 			var shards []metastore.Shard
 			if err := json.NewDecoder(r.Body).Decode(&shards); err != nil {
-				http.Error(w, "invalid payload", http.StatusBadRequest)
+				http.Error(w, fmt.Sprintf("invalid payload: %v", err), http.StatusBadRequest)
 				return
 			}
+
+			// Validate shards
+			for _, shard := range shards {
+				if shard.ID == "" {
+					http.Error(w, "shard ID is required", http.StatusBadRequest)
+					return
+				}
+				if len(shard.Nodes) == 0 {
+					http.Error(w, fmt.Sprintf("shard %s must have at least one node", shard.ID), http.StatusBadRequest)
+					return
+				}
+			}
+
 			if err := metastore.SaveShards(shards); err != nil {
 				http.Error(w, fmt.Sprintf("failed to save shards: %v", err), http.StatusInternalServerError)
 				return
 			}
 			w.WriteHeader(http.StatusNoContent)
+
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -262,18 +292,19 @@ func main() {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
+
 		key := r.URL.Query().Get("key")
 		if key == "" {
-			http.Error(w, "missing key parameter", http.StatusBadRequest)
+			http.Error(w, "key parameter is required", http.StatusBadRequest)
 			return
 		}
-		// Load shards
+
 		shards, err := metastore.LoadShards()
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to load shards: %v", err), http.StatusInternalServerError)
 			return
 		}
-		// Find shard range
+
 		var found metastore.Shard
 		for _, s := range shards {
 			if s.MinKey <= key && (s.MaxKey == "" || key < s.MaxKey) {
@@ -281,16 +312,26 @@ func main() {
 				break
 			}
 		}
+
 		if found.ID == "" {
-			http.Error(w, "no shard for key", http.StatusNotFound)
+			http.Error(w, fmt.Sprintf("no shard found for key: %s", key), http.StatusNotFound)
 			return
 		}
-		// Return shard and nodes
+
+		if len(found.Nodes) == 0 {
+			http.Error(w, fmt.Sprintf("shard %s has no nodes", found.ID), http.StatusInternalServerError)
+			return
+		}
+
 		resp := RouteResponse{ShardID: found.ID, Nodes: found.Nodes}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			log.Printf("Error encoding route response: %v", err)
+		}
 	})
 
 	log.Printf("MetaService running on port %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, mux))
+	if err := http.ListenAndServe(":"+port, mux); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }

@@ -1,5 +1,5 @@
 # Dockerfile for MetaService
-FROM golang:1.23-alpine AS builder
+FROM golang:1.21-alpine AS builder
 # Install CGO and sqlite3 deps
 RUN apk add --no-cache gcc musl-dev sqlite-dev
 ENV CGO_ENABLED=1 GOOS=linux

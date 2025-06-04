@@ -16,7 +16,7 @@ import (
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
 // Requires gRPC-Go v1.64.0 or later.
-const _ = grpc.SupportPackageIsVersion9
+const _ = grpc.SupportPackageIsVersion7
 
 const (
 	AmberService_BeginTransaction_FullMethodName = "/amberdb.AmberService/BeginTransaction"
@@ -46,9 +46,8 @@ func NewAmberServiceClient(cc grpc.ClientConnInterface) AmberServiceClient {
 }
 
 func (c *amberServiceClient) BeginTransaction(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TxnID, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(TxnID)
-	err := c.cc.Invoke(ctx, AmberService_BeginTransaction_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, AmberService_BeginTransaction_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -56,9 +55,8 @@ func (c *amberServiceClient) BeginTransaction(ctx context.Context, in *Empty, op
 }
 
 func (c *amberServiceClient) Write(ctx context.Context, in *WriteRequest, opts ...grpc.CallOption) (*Status, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Status)
-	err := c.cc.Invoke(ctx, AmberService_Write_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, AmberService_Write_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -66,9 +64,8 @@ func (c *amberServiceClient) Write(ctx context.Context, in *WriteRequest, opts .
 }
 
 func (c *amberServiceClient) Read(ctx context.Context, in *ReadRequest, opts ...grpc.CallOption) (*ReadResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ReadResponse)
-	err := c.cc.Invoke(ctx, AmberService_Read_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, AmberService_Read_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -76,9 +73,8 @@ func (c *amberServiceClient) Read(ctx context.Context, in *ReadRequest, opts ...
 }
 
 func (c *amberServiceClient) Commit(ctx context.Context, in *TxnID, opts ...grpc.CallOption) (*Status, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Status)
-	err := c.cc.Invoke(ctx, AmberService_Commit_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, AmberService_Commit_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -86,9 +82,8 @@ func (c *amberServiceClient) Commit(ctx context.Context, in *TxnID, opts ...grpc
 }
 
 func (c *amberServiceClient) Abort(ctx context.Context, in *TxnID, opts ...grpc.CallOption) (*Status, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Status)
-	err := c.cc.Invoke(ctx, AmberService_Abort_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, AmberService_Abort_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}

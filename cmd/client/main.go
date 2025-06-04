@@ -8,13 +8,20 @@ import (
 
 	amberpb "github.com/dishankoza/amberdb/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
-	conn, err := grpc.Dial("node1:50051", grpc.WithInsecure())
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := grpc.DialContext(ctx, "node1:50051",
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("failed to dial: %v", err)
+		log.Fatalf("failed to connect: %v", err)
 	}
+	defer conn.Close()
+
 	client := amberpb.NewAmberServiceClient(conn)
 
 	// Begin transaction

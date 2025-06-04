@@ -10,6 +10,7 @@ import (
 	amberpb "github.com/dishankoza/amberdb/proto"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // TransactionState tracks the state of a distributed transaction
@@ -81,15 +82,28 @@ func (c *Coordinator) PrepareTransaction(ctx context.Context, txID string, write
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
 
+	if tx.State != Preparing {
+		return fmt.Errorf("transaction %s in invalid state for prepare: %v", txID, tx.State)
+	}
+
 	// Group writes by shard
 	writesByNode := make(map[string][]*amberpb.WriteRequest)
 	for _, write := range writes {
+		if write == nil {
+			return fmt.Errorf("invalid write request: nil")
+		}
+		if write.Key == "" {
+			return fmt.Errorf("invalid write request: empty key")
+		}
+
 		shard, err := metastore.GetShardForKey(write.Key)
 		if err != nil {
 			return fmt.Errorf("failed to get shard for key %s: %w", write.Key, err)
 		}
+		if shard.Primary == "" {
+			return fmt.Errorf("shard %s has no primary node", shard.ID)
+		}
 
-		// Use primary node for writes
 		writesByNode[shard.Primary] = append(writesByNode[shard.Primary], write)
 
 		// Track participant
@@ -110,8 +124,13 @@ func (c *Coordinator) PrepareTransaction(ctx context.Context, txID string, write
 		go func(addr string, writes []*amberpb.WriteRequest) {
 			defer wg.Done()
 
-			// Connect to participant
-			conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithTimeout(c.timeout))
+			// Create context with timeout
+			dialCtx, cancel := context.WithTimeout(ctx, c.timeout)
+			defer cancel()
+
+			// Connect to participant with modern gRPC options
+			conn, err := grpc.DialContext(dialCtx, addr,
+				grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
 				errChan <- fmt.Errorf("failed to connect to %s: %w", addr, err)
 				return
@@ -176,8 +195,9 @@ func (c *Coordinator) CommitTransaction(ctx context.Context, txID string) error 
 
 	tx.mu.Lock()
 	if tx.State != Prepared {
+		state := tx.State
 		tx.mu.Unlock()
-		return fmt.Errorf("transaction %s not in prepared state", txID)
+		return fmt.Errorf("transaction %s not in prepared state (current state: %v)", txID, state)
 	}
 	tx.State = Committing
 	tx.mu.Unlock()
@@ -191,7 +211,12 @@ func (c *Coordinator) CommitTransaction(ctx context.Context, txID string) error 
 		go func(p *ParticipantInfo) {
 			defer wg.Done()
 
-			conn, err := grpc.Dial(p.Address, grpc.WithInsecure(), grpc.WithTimeout(c.timeout))
+			// Create context with timeout
+			dialCtx, cancel := context.WithTimeout(ctx, c.timeout)
+			defer cancel()
+
+			conn, err := grpc.DialContext(dialCtx, p.Address,
+				grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
 				errChan <- fmt.Errorf("failed to connect to %s: %w", p.Address, err)
 				return
@@ -237,6 +262,14 @@ func (c *Coordinator) AbortTransaction(ctx context.Context, txID string) error {
 	}
 
 	tx.mu.Lock()
+	if tx.State == Committed {
+		tx.mu.Unlock()
+		return fmt.Errorf("cannot abort committed transaction: %s", txID)
+	}
+	if tx.State == Aborted {
+		tx.mu.Unlock()
+		return nil // Already aborted
+	}
 	tx.State = Aborting
 	tx.mu.Unlock()
 
@@ -253,7 +286,12 @@ func (c *Coordinator) AbortTransaction(ctx context.Context, txID string) error {
 		go func(p *ParticipantInfo) {
 			defer wg.Done()
 
-			conn, err := grpc.Dial(p.Address, grpc.WithInsecure(), grpc.WithTimeout(c.timeout))
+			// Create context with timeout
+			dialCtx, cancel := context.WithTimeout(ctx, c.timeout)
+			defer cancel()
+
+			conn, err := grpc.DialContext(dialCtx, p.Address,
+				grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
 				errChan <- fmt.Errorf("failed to connect to %s: %w", p.Address, err)
 				return

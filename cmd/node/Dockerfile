@@ -1,5 +1,5 @@
 # Dockerfile for AmberDB node
-FROM golang:1.23-alpine AS builder
+FROM golang:1.21-alpine AS builder
 # Install CGO dependencies for sqlite3
 RUN apk add --no-cache gcc musl-dev sqlite-dev
 WORKDIR /app

@@ -1,2 +1,12 @@
+# Build artifacts
+build/
+
+# Logs
+logs/
+
+# Database files
+data/
 *.db
+
+# Existing entries
 raft-data/

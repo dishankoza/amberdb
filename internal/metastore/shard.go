@@ -24,9 +24,14 @@ type ShardConfig struct {
 }
 
 var (
-	configPath string
-	config     *ShardConfig
-	once       sync.Once
+	configPath = func() string {
+		if p := os.Getenv("SHARD_CONFIG_PATH"); p != "" {
+			return p
+		}
+		return "internal/metastore/shard_config.json"
+	}()
+	config *ShardConfig
+	once   sync.Once
 )
 
 // InitShardConfig initializes the shard configuration
@@ -44,6 +49,40 @@ func LoadShards() ([]Shard, error) {
 	}
 	config.mu.RLock()
 	defer config.mu.RUnlock()
+
+	// If no shards exist, create a default shard
+	if len(config.Shards) == 0 {
+		// Load peer addresses for nodes assignment
+		peersPath := os.Getenv("RAFT_CONFIG_PATH")
+		if peersPath == "" {
+			peersPath = "internal/raftstore/raft_config.json"
+		}
+		peerData, pErr := os.ReadFile(peersPath)
+		var nodes []string
+		if pErr == nil {
+			var peerCfg []struct {
+				Address string `json:"address"`
+			}
+			_ = json.Unmarshal(peerData, &peerCfg)
+			for _, pc := range peerCfg {
+				nodes = append(nodes, pc.Address)
+			}
+		}
+		if len(nodes) > 0 {
+			defaultShard := Shard{
+				ID:      "shard1",
+				MinKey:  "",
+				MaxKey:  "",
+				Nodes:   nodes,
+				Primary: nodes[0],
+			}
+			config.Shards = []Shard{defaultShard}
+			if err := saveConfig(); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return config.Shards, nil
 }
 
@@ -74,6 +113,17 @@ func AddShard(shard Shard) error {
 
 	config.mu.Lock()
 	defer config.mu.Unlock()
+
+	// Validate shard
+	if shard.ID == "" {
+		return fmt.Errorf("shard ID is required")
+	}
+	if len(shard.Nodes) == 0 {
+		return fmt.Errorf("shard must have at least one node")
+	}
+	if shard.Primary == "" {
+		shard.Primary = shard.Nodes[0]
+	}
 
 	// Validate shard boundaries
 	for _, s := range config.Shards {
@@ -136,6 +186,103 @@ func UpdateShard(shard Shard) error {
 	}
 
 	return fmt.Errorf("shard not found: %s", shard.ID)
+}
+
+// SplitShard splits the given shard at splitKey into two new shards
+func SplitShard(id, splitKey string) ([]Shard, error) {
+	if config == nil {
+		if err := loadConfig(); err != nil {
+			return nil, err
+		}
+	}
+
+	config.mu.Lock()
+	defer config.mu.Unlock()
+
+	var found *Shard
+	var foundIdx int
+	for i, s := range config.Shards {
+		if s.ID == id {
+			found = &s
+			foundIdx = i
+			break
+		}
+	}
+
+	if found == nil {
+		return nil, fmt.Errorf("shard not found: %s", id)
+	}
+
+	// Validate splitKey in range
+	if !(found.MinKey <= splitKey && (found.MaxKey == "" || splitKey < found.MaxKey)) {
+		return nil, fmt.Errorf("splitKey %s out of range [%s, %s)", splitKey, found.MinKey, found.MaxKey)
+	}
+
+	// Create two halves
+	s1 := Shard{
+		ID:      id + "_a",
+		MinKey:  found.MinKey,
+		MaxKey:  splitKey,
+		Nodes:   found.Nodes,
+		Primary: found.Primary,
+	}
+	s2 := Shard{
+		ID:      id + "_b",
+		MinKey:  splitKey,
+		MaxKey:  found.MaxKey,
+		Nodes:   found.Nodes,
+		Primary: found.Primary,
+	}
+
+	// Replace the original shard with the two new ones
+	newShards := make([]Shard, 0, len(config.Shards)+1)
+	newShards = append(newShards, config.Shards[:foundIdx]...)
+	newShards = append(newShards, s1, s2)
+	newShards = append(newShards, config.Shards[foundIdx+1:]...)
+	config.Shards = newShards
+
+	if err := saveConfig(); err != nil {
+		return nil, err
+	}
+
+	return []Shard{s1, s2}, nil
+}
+
+// SaveShards writes the shard configuration to disk
+func SaveShards(shards []Shard) error {
+	if config == nil {
+		if err := loadConfig(); err != nil {
+			return err
+		}
+	}
+
+	config.mu.Lock()
+	defer config.mu.Unlock()
+
+	// Validate all shards
+	for _, shard := range shards {
+		if shard.ID == "" {
+			return fmt.Errorf("shard ID is required")
+		}
+		if len(shard.Nodes) == 0 {
+			return fmt.Errorf("shard %s must have at least one node", shard.ID)
+		}
+		if shard.Primary == "" {
+			shard.Primary = shard.Nodes[0]
+		}
+	}
+
+	// Check for overlaps
+	for i, a := range shards {
+		for j, b := range shards {
+			if i != j && overlaps(a, b) {
+				return fmt.Errorf("shard %s overlaps with shard %s", a.ID, b.ID)
+			}
+		}
+	}
+
+	config.Shards = shards
+	return saveConfig()
 }
 
 // Helper functions
