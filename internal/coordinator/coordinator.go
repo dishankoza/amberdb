@@ -88,6 +88,7 @@ func (c *Coordinator) PrepareTransaction(ctx context.Context, txID string, write
 
 	// Group writes by shard
 	writesByNode := make(map[string][]*amberpb.WriteRequest)
+	shardByNode := make(map[string]*metastore.Shard)
 	for _, write := range writes {
 		if write == nil {
 			return fmt.Errorf("invalid write request: nil")
@@ -105,6 +106,7 @@ func (c *Coordinator) PrepareTransaction(ctx context.Context, txID string, write
 		}
 
 		writesByNode[shard.Primary] = append(writesByNode[shard.Primary], write)
+		shardByNode[shard.Primary] = shard
 
 		// Track participant
 		if _, exists := tx.Participants[shard.ID]; !exists {
@@ -120,50 +122,71 @@ func (c *Coordinator) PrepareTransaction(ctx context.Context, txID string, write
 	errChan := make(chan error, len(writesByNode))
 
 	for nodeAddr, nodeWrites := range writesByNode {
+		s := shardByNode[nodeAddr]
 		wg.Add(1)
-		go func(addr string, writes []*amberpb.WriteRequest) {
+		go func(addr string, writes []*amberpb.WriteRequest, shard *metastore.Shard) {
 			defer wg.Done()
 
-			// Create context with timeout
-			dialCtx, cancel := context.WithTimeout(ctx, c.timeout)
-			defer cancel()
+			candidates := append([]string{addr}, shard.Nodes...)
+			seen := map[string]struct{}{}
+			var lastErr error
 
-			// Connect to participant with modern gRPC options
-			conn, err := grpc.DialContext(dialCtx, addr,
-				grpc.WithTransportCredentials(insecure.NewCredentials()))
-			if err != nil {
-				errChan <- fmt.Errorf("failed to connect to %s: %w", addr, err)
-				return
-			}
-			defer conn.Close()
-
-			client := amberpb.NewAmberServiceClient(conn)
-
-			// Begin local transaction
-			localTx, err := client.BeginTransaction(ctx, &amberpb.Empty{})
-			if err != nil {
-				errChan <- fmt.Errorf("failed to begin transaction on %s: %w", addr, err)
-				return
-			}
-
-			// Execute writes
-			for _, write := range writes {
-				write.TxId = localTx.Id
-				status, err := client.Write(ctx, write)
-				if err != nil || !status.Success {
-					errChan <- fmt.Errorf("write failed on %s: %v %s", addr, err, status.GetMessage())
-					return
+			for _, cand := range candidates {
+				if _, dup := seen[cand]; dup {
+					continue
 				}
-			}
+				seen[cand] = struct{}{}
 
-			// Update participant state
-			for _, p := range tx.Participants {
-				if p.Address == addr {
+				dialCtx, cancel := context.WithTimeout(ctx, c.timeout)
+				conn, err := grpc.DialContext(dialCtx, cand,
+					grpc.WithTransportCredentials(insecure.NewCredentials()))
+				cancel()
+				if err != nil {
+					lastErr = err
+					continue
+				}
+
+				client := amberpb.NewAmberServiceClient(conn)
+
+				// Begin txn on this replica
+				localTx, err := client.BeginTransaction(ctx, &amberpb.Empty{})
+				if err != nil {
+					conn.Close()
+					lastErr = err
+					continue
+				}
+
+				ok := true
+				for _, w := range writes {
+					w.TxId = localTx.Id
+					st, err := client.Write(ctx, w)
+					if err != nil || !st.Success {
+						// follower answered → try next replica
+						if st.GetMessage() == "not the leader" {
+							ok = false
+							break
+						}
+						conn.Close()
+						errChan <- fmt.Errorf("write failed on %s: %v %s",
+							cand, err, st.GetMessage())
+						return
+					}
+				}
+				if ok {
+					shard.Primary = cand
+					p := tx.Participants[shard.ID]
+					p.Address = cand
 					p.State = Prepared
 					p.TxID = localTx.Id
+					conn.Close()
+					return
 				}
+				conn.Close()
 			}
-		}(nodeAddr, nodeWrites)
+			// All replicas rejected us
+			errChan <- fmt.Errorf("no leader found for shard %s: %v",
+				shard.ID, lastErr)
+		}(nodeAddr, nodeWrites, s)
 	}
 
 	// Wait for all prepare operations to complete
@@ -268,7 +291,7 @@ func (c *Coordinator) AbortTransaction(ctx context.Context, txID string) error {
 	}
 	if tx.State == Aborted {
 		tx.mu.Unlock()
-		return nil // Already aborted
+		return nil
 	}
 	tx.State = Aborting
 	tx.mu.Unlock()
@@ -279,7 +302,7 @@ func (c *Coordinator) AbortTransaction(ctx context.Context, txID string) error {
 
 	for _, participant := range tx.Participants {
 		if participant.TxID == "" {
-			continue // Skip participants that haven't started
+			continue
 		}
 
 		wg.Add(1)

@@ -1,55 +1,229 @@
+// package main
+
+// import (
+// 	"bytes"
+// 	"encoding/json"
+// 	"fmt"
+// 	"io"
+// 	"log"
+// 	"net/http"
+// )
+
+// // MetaserviceClient handles interactions with the metaservice
+// type MetaserviceClient struct {
+// 	baseURL string
+// 	client  *http.Client
+// }
+
+// // Write represents a key-value write operation
+// type Write struct {
+// 	Key   string `json:"key"`
+// 	Value string `json:"value"`
+// }
+
+// // PrepareRequest represents a transaction prepare request
+// type PrepareRequest struct {
+// 	TransactionID string            `json:"transaction_id"`
+// 	Writes        map[string]*Write `json:"writes"`
+// }
+
+// // CommitRequest represents a transaction commit request
+// type CommitRequest struct {
+// 	TransactionID string `json:"transaction_id"`
+// }
+
+// // BeginResponse represents the response from begin transaction
+// type BeginResponse struct {
+// 	TransactionID string `json:"transaction_id"`
+// }
+
+// func NewMetaserviceClient(baseURL string) *MetaserviceClient {
+// 	return &MetaserviceClient{
+// 		baseURL: baseURL,
+// 		client:  &http.Client{},
+// 	}
+// }
+
+// // BeginTransaction starts a new transaction
+// func (mc *MetaserviceClient) BeginTransaction() (string, error) {
+// 	resp, err := mc.client.Post(mc.baseURL+"/transaction/begin", "application/json", nil)
+// 	if err != nil {
+// 		return "", fmt.Errorf("failed to begin transaction: %v", err)
+// 	}
+// 	defer resp.Body.Close()
+
+// 	var result BeginResponse
+// 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+// 		return "", fmt.Errorf("failed to decode response: %v", err)
+// 	}
+
+// 	return result.TransactionID, nil
+// }
+
+// // PrepareTxn prepares a transaction with the given writes
+// func (mc *MetaserviceClient) PrepareTxn(txID string, writes map[string]*Write) error {
+// 	prepareReq := PrepareRequest{
+// 		TransactionID: txID,
+// 		Writes:        writes,
+// 	}
+
+// 	jsonData, err := json.Marshal(prepareReq)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to marshal prepare request: %v", err)
+// 	}
+
+// 	resp, err := mc.client.Post(
+// 		mc.baseURL+"/transaction/prepare",
+// 		"application/json",
+// 		bytes.NewBuffer(jsonData),
+// 	)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to prepare transaction: %v", err)
+// 	}
+// 	defer resp.Body.Close()
+
+// 	body, _ := io.ReadAll(resp.Body)
+// 	if resp.StatusCode != http.StatusOK {
+// 		return fmt.Errorf("prepare failed with status %d: %s", resp.StatusCode, string(body))
+// 	}
+
+// 	fmt.Printf("Prepare successful: %s\n", string(body))
+// 	return nil
+// }
+
+// // CommitTxn commits a prepared transaction
+// func (mc *MetaserviceClient) CommitTxn(txID string) error {
+// 	commitReq := CommitRequest{
+// 		TransactionID: txID,
+// 	}
+
+// 	jsonData, err := json.Marshal(commitReq)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to marshal commit request: %v", err)
+// 	}
+
+// 	resp, err := mc.client.Post(
+// 		mc.baseURL+"/transaction/commit",
+// 		"application/json",
+// 		bytes.NewBuffer(jsonData),
+// 	)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to commit transaction: %v", err)
+// 	}
+// 	defer resp.Body.Close()
+
+// 	body, _ := io.ReadAll(resp.Body)
+// 	if resp.StatusCode != http.StatusOK {
+// 		return fmt.Errorf("commit failed with status %d: %s", resp.StatusCode, string(body))
+// 	}
+
+// 	fmt.Printf("Commit successful: %s\n", string(body))
+// 	return nil
+// }
+
+// func main() {
+// 	client := NewMetaserviceClient("http://localhost:8080")
+
+// 	// Begin transaction
+// 	fmt.Println("=== Beginning Transaction ===")
+// 	txID, err := client.BeginTransaction()
+// 	if err != nil {
+// 		log.Fatalf("Failed to begin transaction: %v", err)
+// 	}
+// 	fmt.Printf("Transaction ID: %s\n", txID)
+
+// 	// Prepare writes
+// 	writes := map[string]*Write{
+// 		"a": {Key: "a", Value: "apple"},
+// 		"b": {Key: "b", Value: "banana"},
+// 	}
+
+// 	// Prepare transaction
+// 	fmt.Println("\n=== Preparing Transaction ===")
+// 	if err := client.PrepareTxn(txID, writes); err != nil {
+// 		log.Fatalf("Failed to prepare transaction: %v", err)
+// 	}
+
+// 	// Commit transaction
+// 	fmt.Println("\n=== Committing Transaction ===")
+// 	if err := client.CommitTxn(txID); err != nil {
+// 		log.Fatalf("Failed to commit transaction: %v", err)
+// 	}
+// }
+
 package main
 
 import (
-	"context"
+	"bytes"
+	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
-	"time"
-
-	amberpb "github.com/dishankoza/amberdb/proto"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"net/http"
+	"net/url"
 )
 
+func mustParse(s string) *url.URL { u, _ := url.Parse(s); return u }
+
+// ---------- helpers ----------
+func mustDo(req *http.Request) *http.Response {
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatalf("request failed: %v", err)
+	}
+	return resp
+}
+
+// ---------- main ----------
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	meta := flag.String("meta", "http://44.202.68.25:8080", "metaservice URL")
+	key := flag.String("key", "x", "KV key to write")
+	val := flag.String("val", "value1", "KV value to write")
+	flag.Parse()
 
-	conn, err := grpc.DialContext(ctx, "node1:50051",
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("failed to connect: %v", err)
+	/* 1 ─── Begin ──────────────────────────────────────────── */
+	beginResp := struct {
+		TransactionID string `json:"transaction_id"`
+	}{}
+	resp := mustDo(&http.Request{
+		Method: "POST",
+		URL:    mustParse(*meta + "/transaction/begin"),
+	})
+	defer resp.Body.Close()
+	if err := json.NewDecoder(resp.Body).Decode(&beginResp); err != nil {
+		log.Fatalf("decode begin: %v", err)
 	}
-	defer conn.Close()
+	fmt.Println("Started Txn:", beginResp.TransactionID)
 
-	client := amberpb.NewAmberServiceClient(conn)
+	/* 2 ─── Prepare ────────────────────────────────────────── */
+	prepBody, _ := json.Marshal(map[string]any{
+		"transaction_id": beginResp.TransactionID,
+		"writes": map[string]any{
+			*key: map[string]string{
+				"key":   *key,
+				"value": *val,
+			},
+		},
+	})
+	req, _ := http.NewRequest("POST", *meta+"/transaction/prepare",
+		bytes.NewReader(prepBody))
+	req.Header.Set("Content-Type", "application/json")
 
-	// Begin transaction
-	txn, err := client.BeginTransaction(context.Background(), &amberpb.Empty{})
-	if err != nil {
-		log.Fatalf("BeginTransaction error: %v", err)
-	}
-	fmt.Printf("Started Txn: %s\n", txn.Id)
-
-	// Write key1
-	status, err := client.Write(context.Background(), &amberpb.WriteRequest{Key: "key1", Value: "value1", TxId: txn.Id})
-	if err != nil || !status.Success {
-		log.Fatalf("Write error: %v %s", err, status.Message)
+	if prep := mustDo(req); prep.StatusCode != 200 {
+		log.Fatalf("prepare failed: http %d", prep.StatusCode)
 	}
 	fmt.Println("Write OK")
 
-	// Commit
-	status, err = client.Commit(context.Background(), &amberpb.TxnID{Id: txn.Id})
-	if err != nil || !status.Success {
-		log.Fatalf("Commit error: %v %s", err, status.Message)
+	/* 3 ─── Commit ─────────────────────────────────────────── */
+	commitBody, _ := json.Marshal(map[string]string{
+		"transaction_id": beginResp.TransactionID,
+	})
+	req, _ = http.NewRequest("POST", *meta+"/transaction/commit",
+		bytes.NewReader(commitBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	if com := mustDo(req); com.StatusCode != 200 {
+		log.Fatalf("commit failed: http %d", com.StatusCode)
 	}
 	fmt.Println("Commit OK")
-
-	// Read back
-	time.Sleep(1 * time.Second)
-	readResp, err := client.Read(context.Background(), &amberpb.ReadRequest{Key: "key1"})
-	if err != nil {
-		log.Fatalf("Read error: %v", err)
-	}
-	fmt.Printf("Read value: %s\n", readResp.Value)
 }
