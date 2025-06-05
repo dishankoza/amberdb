@@ -176,7 +176,7 @@ func mustDo(req *http.Request) *http.Response {
 
 // ---------- main ----------
 func main() {
-	meta := flag.String("meta", "http://44.202.68.25:8080", "metaservice URL")
+	meta := flag.String("meta", "http://192.168.64.5:8080", "metaservice URL")
 	key := flag.String("key", "x", "KV key to write")
 	val := flag.String("val", "value1", "KV value to write")
 	flag.Parse()
